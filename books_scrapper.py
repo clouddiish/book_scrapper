@@ -15,7 +15,7 @@ def get_urls():
     return urls
 
 
-def get_book_cards(url):
+def get_book_cards_from_one_page(url):
     page = requests.get(url)
     soup = BeautifulSoup(page.content, "html.parser")
     results = soup.find("div", class_="col-sm-8 col-md-9")
@@ -23,10 +23,10 @@ def get_book_cards(url):
     return book_cards
 
 
-def get_book_cards_list(urls):
+def get_book_cards_from_all_pages(urls):
     book_cards_list = []
     for url in urls:
-        book_cards_list += get_book_cards(url)
+        book_cards_list += get_book_cards_from_one_page(url)
     return book_cards_list
 
 
@@ -46,7 +46,7 @@ def print_books_data(book_cards_list):
 
 
 def main():
-    print_books_data(get_book_cards_list(get_urls()))
+    print_books_data(get_book_cards_from_all_pages(get_urls()))
 
 
 if __name__ == "__main__":
