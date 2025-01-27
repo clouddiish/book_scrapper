@@ -2,8 +2,6 @@ import requests
 import csv
 from bs4 import BeautifulSoup
 
-FILE = "books.csv"
-
 
 def get_urls():
     urls = []
@@ -30,23 +28,25 @@ def get_book_cards_from_all_pages(urls):
     return book_cards_list
 
 
-def print_books_data(book_cards_list):
-    for book_card in book_cards_list:
-        title_element = book_card.find_all("a")[1]
-        rating_element = book_card.find("p", class_="star-rating")
-        price_element = book_card.find("p", class_="price_color")
+def write_books_data(book_cards_list, filename):
+    with open(filename, "w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(["title", "rating", "price"])
 
-        title = title_element.text.strip()
-        rating = rating_element["class"][1]
-        price = price_element.text.strip()
+        for book_card in book_cards_list:
+            title_element = book_card.find_all("a")[1]
+            rating_element = book_card.find("p", class_="star-rating")
+            price_element = book_card.find("p", class_="price_color")
 
-        print(title)
-        print(rating)
-        print(price)
+            title = title_element.text.strip()
+            rating = rating_element["class"][1]
+            price = price_element.text.strip().strip("£")
+
+            writer.writerow([title, rating, price])
 
 
 def main():
-    print_books_data(get_book_cards_from_all_pages(get_urls()))
+    write_books_data(get_book_cards_from_all_pages(get_urls()), "books.csv")
 
 
 if __name__ == "__main__":
