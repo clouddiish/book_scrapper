@@ -6,6 +6,16 @@ URL = "https://books.toscrape.com/catalogue/category/books/nonfiction_13/index.h
 FILE = "books.csv"
 
 
+def get_urls():
+    urls = []
+    for page in range(1, 7):
+        urls.append(
+            f"https://books.toscrape.com/catalogue/category/books/nonfiction_13/page-{page}.html"
+        )
+
+    return urls
+
+
 def get_book_cards(url):
     page = requests.get(URL)
     soup = BeautifulSoup(page.content, "html.parser")
@@ -30,7 +40,7 @@ def print_books_data(book_cards):
 
 
 def main():
-    print_books_data(get_book_cards(URL))
+    print(get_urls())
 
 
 if __name__ == "__main__":
