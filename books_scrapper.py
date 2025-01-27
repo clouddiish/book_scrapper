@@ -2,7 +2,6 @@ import requests
 import csv
 from bs4 import BeautifulSoup
 
-URL = "https://books.toscrape.com/catalogue/category/books/nonfiction_13/index.html"
 FILE = "books.csv"
 
 
@@ -17,15 +16,22 @@ def get_urls():
 
 
 def get_book_cards(url):
-    page = requests.get(URL)
+    page = requests.get(url)
     soup = BeautifulSoup(page.content, "html.parser")
     results = soup.find("div", class_="col-sm-8 col-md-9")
     book_cards = results.find_all("article", class_="product_pod")
     return book_cards
 
 
-def print_books_data(book_cards):
-    for book_card in book_cards:
+def get_book_cards_list(urls):
+    book_cards_list = []
+    for url in urls:
+        book_cards_list += get_book_cards(url)
+    return book_cards_list
+
+
+def print_books_data(book_cards_list):
+    for book_card in book_cards_list:
         title_element = book_card.find_all("a")[1]
         rating_element = book_card.find("p", class_="star-rating")
         price_element = book_card.find("p", class_="price_color")
@@ -40,7 +46,7 @@ def print_books_data(book_cards):
 
 
 def main():
-    print(get_urls())
+    print_books_data(get_book_cards_list(get_urls()))
 
 
 if __name__ == "__main__":
