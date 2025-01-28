@@ -1,6 +1,8 @@
 import aiohttp
 import asyncio
 import time
+import csv
+from bs4 import BeautifulSoup
 
 
 def get_urls():
@@ -10,19 +12,42 @@ def get_urls():
     return [base_url.format(page) for page in range(1, 7)]
 
 
-async def fetch_page(session, url):
+async def fetch_book_cards_from_page(session, url):
     async with session.get(url) as response:
-        return await response.text()
+        page = await response.read()
+        soup = BeautifulSoup(page, "html.parser")
+        results = soup.find("div", class_="col-sm-8 col-md-9")
+        return results.find_all("article", class_="product_pod")
+
+
+async def fetch_all_book_cards(urls):
+    async with aiohttp.ClientSession() as session:
+        tasks = [fetch_book_cards_from_page(session, url) for url in urls]
+        results = await asyncio.gather(*tasks)
+        return [book_card for page_results in results for book_card in page_results]
+
+
+def extract_book_data(book_card):
+    title = book_card.find_all("a")[1].text.strip()
+    rating = book_card.find("p", class_="star-rating")["class"][1]
+    price = book_card.find("p", class_="price_color").text.strip("£")
+
+    return title, rating, price
+
+
+def write_books_to_csv(book_cards, filename):
+    with open(filename, "w", newline="", encoding="utf-8") as file:
+        writer = csv.writer(file)
+        writer.writerow(["title", "rating", "price"])
+
+        for book_card in book_cards:
+            writer.writerow(extract_book_data(book_card))
 
 
 async def main():
-    async with aiohttp.ClientSession() as session:
-        tasks = []
-
-        for url in get_urls():
-            tasks.append(fetch_page(session, url))
-
-        htmls = await asyncio.gather(*tasks)
+    urls = get_urls()
+    book_cards = await fetch_all_book_cards(urls)
+    write_books_to_csv(book_cards, "async_books.csv")
 
 
 if __name__ == "__main__":
