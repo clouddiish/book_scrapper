@@ -33,8 +33,8 @@ def extract_book_data(book_card):
 
 
 def write_books_to_csv(book_cards, filename):
-    with open(filename, "w", newline="") as f:
-        writer = csv.writer(f)
+    with open(filename, "w", newline="", encoding="utf-8") as file:
+        writer = csv.writer(file)
         writer.writerow(["title", "rating", "price"])
 
         for book_card in book_cards:
