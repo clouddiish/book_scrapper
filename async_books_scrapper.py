@@ -1,6 +1,5 @@
 import aiohttp
 import asyncio
-import time
 import csv
 from bs4 import BeautifulSoup
 
@@ -25,7 +24,7 @@ async def fetch_book_cards_from_page(session, sem, url):
                 raise HttpError("Http error occured", response.status)
             page = await response.read()
             soup = BeautifulSoup(page, "html.parser")
-            results = soup.find("div", class_="col-sm-8 col-md-9")
+            results = soup.find("div", class_="col-sm-8 col-md-9") if results else []
             return results.find_all("article", class_="product_pod")
 
 
@@ -33,7 +32,7 @@ async def fetch_all_book_cards(urls, sem):
     try:
         async with aiohttp.ClientSession() as session:
             tasks = [fetch_book_cards_from_page(session, sem, url) for url in urls]
-            results = await asyncio.gather(*tasks, return_exceptions=True)
+            results = await asyncio.gather(*tasks)
             return [book_card for page_results in results for book_card in page_results]
 
     except HttpError as http_err:
@@ -51,16 +50,8 @@ def extract_book_data(book_card):
     rating = book_card.find("p", class_="star-rating")["class"][1]
     price = book_card.find("p", class_="price_color").text.strip("£")
 
-    if rating == "One":
-        rating = 1
-    elif rating == "Two":
-        rating = 2
-    elif rating == "Three":
-        rating = 3
-    elif rating == "Four":
-        rating = 4
-    elif rating == "Five":
-        rating = 5
+    rating_map = {"One": 1, "Two": 2, "Three": 3, "Four": 4, "Five": 5}
+    rating = rating_map.get(rating, 0)
 
     return title, rating, price
 
