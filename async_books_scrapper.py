@@ -32,10 +32,13 @@ async def fetch_book_cards_from_page(session, url):
 
 
 async def fetch_all_book_cards(urls):
-    async with aiohttp.ClientSession() as session:
-        tasks = [fetch_book_cards_from_page(session, url) for url in urls]
-        results = await asyncio.gather(*tasks)
-        return [book_card for page_results in results for book_card in page_results]
+    try:
+        async with aiohttp.ClientSession() as session:
+            tasks = [fetch_book_cards_from_page(session, url) for url in urls]
+            results = await asyncio.gather(*tasks)
+            return [book_card for page_results in results for book_card in page_results]
+    except TypeError:
+        print("Couldn't fetch all book cards")
 
 
 def extract_book_data(book_card):
@@ -47,12 +50,15 @@ def extract_book_data(book_card):
 
 
 def write_books_to_csv(book_cards, filename):
-    with open(filename, "w", newline="", encoding="utf-8") as file:
-        writer = csv.writer(file)
-        writer.writerow(["title", "rating", "price"])
+    try:
+        with open(filename, "w", newline="", encoding="utf-8") as file:
+            writer = csv.writer(file)
+            writer.writerow(["title", "rating", "price"])
 
-        for book_card in book_cards:
-            writer.writerow(extract_book_data(book_card))
+            for book_card in book_cards:
+                writer.writerow(extract_book_data(book_card))
+    except TypeError:
+        print("Couldn't write book data to csv file")
 
 
 async def main():
