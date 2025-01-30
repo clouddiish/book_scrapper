@@ -14,35 +14,38 @@ def get_urls():
     base_url = (
         "https://books.toscrape.com/catalogue/category/books/nonfiction_13/page-{}.html"
     )
-    return [base_url.format(page) for page in range(1, 7)]
+    return [base_url.format(page) for page in range(1, 8)]
 
 
 async def fetch_book_cards_from_page(session, sem, url):
     async with sem:
-        async with session.get(url) as response:
-            if not response.ok:
-                raise HttpError("Http error occured", response.status)
-            page = await response.read()
-            soup = BeautifulSoup(page, "html.parser")
-            results = soup.find("div", class_="col-sm-8 col-md-9") if results else []
-            return results.find_all("article", class_="product_pod")
+        try:
+            async with session.get(url) as response:
+
+                if not response.ok:
+                    raise HttpError(
+                        f"Http error occured in url {url} with code", response.status
+                    )
+
+                page = await response.read()
+                soup = BeautifulSoup(page, "html.parser")
+
+                results = soup.find("div", class_="col-sm-8 col-md-9")
+                if results is None:
+                    return []
+
+                return results.find_all("article", class_="product_pod")
+
+        except HttpError as http_err:
+            print(f"Http error occured in url {url} with code", http_err.error_code)
+            return []
 
 
 async def fetch_all_book_cards(urls, sem):
-    try:
-        async with aiohttp.ClientSession() as session:
-            tasks = [fetch_book_cards_from_page(session, sem, url) for url in urls]
-            results = await asyncio.gather(*tasks)
-            return [book_card for page_results in results for book_card in page_results]
-
-    except HttpError as http_err:
-        print("Http error: code ", http_err.error_code)
-
-    except TypeError:
-        print("Error: couldn't fetch all book cards")
-
-    except Exception as error:
-        print(f"Error: {error}")
+    async with aiohttp.ClientSession() as session:
+        tasks = [fetch_book_cards_from_page(session, sem, url) for url in urls]
+        results = await asyncio.gather(*tasks)
+        return [book_card for page_results in results for book_card in page_results]
 
 
 def extract_book_data(book_card):
