@@ -32,9 +32,8 @@ async def fetch_book_cards_from_page(session, sem, url):
 async def fetch_all_book_cards(urls, sem):
     try:
         async with aiohttp.ClientSession() as session:
-
             tasks = [fetch_book_cards_from_page(session, sem, url) for url in urls]
-            results = await asyncio.gather(*tasks)
+            results = await asyncio.gather(*tasks, return_exceptions=True)
             return [book_card for page_results in results for book_card in page_results]
 
     except HttpError as http_err:
@@ -51,6 +50,17 @@ def extract_book_data(book_card):
     title = book_card.find_all("a")[1].text.strip()
     rating = book_card.find("p", class_="star-rating")["class"][1]
     price = book_card.find("p", class_="price_color").text.strip("£")
+
+    if rating == "One":
+        rating = 1
+    elif rating == "Two":
+        rating = 2
+    elif rating == "Three":
+        rating = 3
+    elif rating == "Four":
+        rating = 4
+    elif rating == "Five":
+        rating = 5
 
     return title, rating, price
 
