@@ -13,31 +13,36 @@ class HttpError(Exception):
 
 def get_urls():
     base_url = (
-        "https://books.toscrape.com/catalogue/category/boks/nonfiction_13/page-{}.html"
+        "https://books.toscrape.com/catalogue/category/books/nonfiction_13/page-{}.html"
     )
     return [base_url.format(page) for page in range(1, 7)]
 
 
-async def fetch_book_cards_from_page(session, url):
-    async with session.get(url) as response:
-        if not response.ok:
-            raise HttpError("Http error occured", response.status)
-        page = await response.read()
-        soup = BeautifulSoup(page, "html.parser")
-        results = soup.find("div", class_="col-sm-8 col-md-9")
-        return results.find_all("article", class_="product_pod")
+async def fetch_book_cards_from_page(session, sem, url):
+    async with sem:
+        async with session.get(url) as response:
+            if not response.ok:
+                raise HttpError("Http error occured", response.status)
+            page = await response.read()
+            soup = BeautifulSoup(page, "html.parser")
+            results = soup.find("div", class_="col-sm-8 col-md-9")
+            return results.find_all("article", class_="product_pod")
 
 
-async def fetch_all_book_cards(urls):
+async def fetch_all_book_cards(urls, sem):
     try:
         async with aiohttp.ClientSession() as session:
-            tasks = [fetch_book_cards_from_page(session, url) for url in urls]
+
+            tasks = [fetch_book_cards_from_page(session, sem, url) for url in urls]
             results = await asyncio.gather(*tasks)
             return [book_card for page_results in results for book_card in page_results]
+
     except HttpError as http_err:
         print("Http error: code ", http_err.error_code)
+
     except TypeError:
         print("Error: couldn't fetch all book cards")
+
     except Exception as error:
         print(f"Error: {error}")
 
@@ -58,15 +63,18 @@ def write_books_to_csv(book_cards, filename):
 
             for book_card in book_cards:
                 writer.writerow(extract_book_data(book_card))
+
     except TypeError:
         print("Error: couldn't write book data to csv file")
+
     except Exception as error:
         print(f"Error: {error}")
 
 
 async def main():
     urls = get_urls()
-    book_cards = await fetch_all_book_cards(urls)
+    sem = asyncio.Semaphore(3)
+    book_cards = await fetch_all_book_cards(urls, sem)
     write_books_to_csv(book_cards, "async_books.csv")
 
 
