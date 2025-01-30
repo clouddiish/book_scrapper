@@ -18,17 +18,40 @@ class HttpError(Exception):
         self.error_code = error_code
 
 
-def get_urls():
+async def fetch_number_of_pages():
+    """
+    Fetch number of pages on the site to scrap from.
+
+    Returns:
+        int: Number of pages on the site to scrap from.
+    """
+    url = "https://books.toscrape.com"
+
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url) as response:
+            if not response.ok:
+                raise HttpError(
+                    f"Http error occured in url {url} with code", response.status
+                )
+
+            page = await response.read()
+            soup = BeautifulSoup(page, "html.parser")
+
+            results = soup.find("li", class_="current")
+
+            return int(results.text.split()[3])
+
+
+async def get_urls():
     """
     Generate a list of URLs to scrape book data from.
 
     Returns:
         list: A list of formatted URLs for different pages of books.
     """
-    base_url = (
-        "https://books.toscrape.com/catalogue/category/books/nonfiction_13/page-{}.html"
-    )
-    return [base_url.format(page) for page in range(1, 8)]
+    base_url = "https://books.toscrape.com/catalogue/page-{}.html"
+    number_of_pages = await fetch_number_of_pages()
+    return [base_url.format(page) for page in range(1, number_of_pages + 1)]
 
 
 async def fetch_book_cards_from_page(session, sem, url):
@@ -138,8 +161,8 @@ async def main():
     2. Fetches book data from multiple pages concurrently.
     3. Writes the book data to a CSV file.
     """
-    urls = get_urls()
-    sem = asyncio.Semaphore(3)
+    urls = await get_urls()
+    sem = asyncio.Semaphore(10)
     book_cards = await fetch_all_book_cards(urls, sem)
     write_books_to_csv(book_cards, "async_books.csv")
 
