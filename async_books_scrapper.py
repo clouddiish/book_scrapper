@@ -1,7 +1,21 @@
 import aiohttp
 import asyncio
 import csv
+import logging
 from bs4 import BeautifulSoup
+
+logger = logging.getLogger(__name__)
+logger.setLevel("DEBUG")
+
+console_handler = logging.StreamHandler()
+console_handler.setLevel("DEBUG")
+
+formatter = logging.Formatter(
+    "{asctime} [{levelname}]: {message}", style="{", datefmt="%Y-%m-%d %H:%M"
+)
+console_handler.setFormatter(formatter)
+
+logger.addHandler(console_handler)
 
 
 class HttpError(Exception):
@@ -27,19 +41,23 @@ async def fetch_number_of_pages():
     """
     url = "https://books.toscrape.com"
 
-    async with aiohttp.ClientSession() as session:
-        async with session.get(url) as response:
-            if not response.ok:
-                raise HttpError(
-                    f"Http error occured in url {url} with code", response.status
-                )
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as response:
+                if not response.ok:
+                    raise HttpError(
+                        f"Http error occured in url {url} with code {response.status}",
+                        response.status,
+                    )
 
-            page = await response.read()
-            soup = BeautifulSoup(page, "html.parser")
+                page = await response.read()
+                soup = BeautifulSoup(page, "html.parser")
 
-            results = soup.find("li", class_="current")
-
-            return int(results.text.split()[3])
+                results = soup.find("li", class_="current")
+                logger.info("Found maximum number of pages")
+                return int(results.text.split()[3])
+    except Exception as error:
+        logger.error(f"Unable to fetch number of pages, {error}")
 
 
 async def get_urls():
@@ -49,9 +67,14 @@ async def get_urls():
     Returns:
         list: A list of formatted URLs for different pages of books.
     """
-    base_url = "https://books.toscrape.com/catalogue/page-{}.html"
-    number_of_pages = await fetch_number_of_pages()
-    return [base_url.format(page) for page in range(1, number_of_pages + 1)]
+    try:
+        base_url = "https://books.toscrape.com/catalogue/page-{}.html"
+        number_of_pages = await fetch_number_of_pages()
+        logger.info("Getting list of URLs")
+        return [base_url.format(page) for page in range(1, number_of_pages + 1)]
+
+    except Exception as error:
+        logger.error(f"Unable get list of URLs, {error}")
 
 
 async def fetch_book_cards_from_page(session, sem, url):
@@ -73,7 +96,8 @@ async def fetch_book_cards_from_page(session, sem, url):
 
                 if not response.ok:
                     raise HttpError(
-                        f"Http error occured in url {url} with code", response.status
+                        f"Http error occured in url {url} with code {response.status}",
+                        response.status,
                     )
 
                 page = await response.read()
@@ -86,7 +110,9 @@ async def fetch_book_cards_from_page(session, sem, url):
                 return results.find_all("article", class_="product_pod")
 
         except HttpError as http_err:
-            print(f"Http error occured in url {url} with code", http_err.error_code)
+            logger.error(
+                f"Unable to fetch book cards from page {url}. Http error occured with code {http_err.error_code}"
+            )
             return []
 
 
@@ -101,10 +127,15 @@ async def fetch_all_book_cards(urls, sem):
     Returns:
         list: A flattened list of book cards from all pages.
     """
-    async with aiohttp.ClientSession() as session:
-        tasks = [fetch_book_cards_from_page(session, sem, url) for url in urls]
-        results = await asyncio.gather(*tasks)
-        return [book_card for page_results in results for book_card in page_results]
+    try:
+        logger.info("Fetching books cards")
+        async with aiohttp.ClientSession() as session:
+            tasks = [fetch_book_cards_from_page(session, sem, url) for url in urls]
+            results = await asyncio.gather(*tasks)
+            return [book_card for page_results in results for book_card in page_results]
+    except Exception as error:
+        logger.error(f"Unable to fetch book cards, {error}")
+        return []
 
 
 def extract_book_data(book_card):
@@ -138,6 +169,8 @@ def write_books_to_csv(book_cards, filename):
     Raises:
         TypeError: If there's an issue writing the data to the CSV file.
     """
+    logger.info(f"Writing {len(book_cards)} book records to file {filename}")
+
     try:
         with open(filename, "w", newline="", encoding="utf-8") as file:
             writer = csv.writer(file)
@@ -146,11 +179,12 @@ def write_books_to_csv(book_cards, filename):
             for book_card in book_cards:
                 writer.writerow(extract_book_data(book_card))
 
-    except TypeError:
-        print("Error: couldn't write book data to csv file")
+        logger.info(
+            f"Successfuly wrote {len(book_cards)} book records to file {filename}"
+        )
 
     except Exception as error:
-        print(f"Error: {error}")
+        logger.error(f"Unable to write to csv file, {error}")
 
 
 async def main():
@@ -161,10 +195,12 @@ async def main():
     2. Fetches book data from multiple pages concurrently.
     3. Writes the book data to a CSV file.
     """
+    logger.info("Web scrapper started")
     urls = await get_urls()
     sem = asyncio.Semaphore(10)
     book_cards = await fetch_all_book_cards(urls, sem)
     write_books_to_csv(book_cards, "async_books.csv")
+    logger.info("Web scraper ended.")
 
 
 if __name__ == "__main__":
