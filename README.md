@@ -1,6 +1,6 @@
 # asynchronous book scrapper
 
-Asynchronous book scrapper is a web scrapper for extracting book data from the website [https://books.toscrape.com/](Books to Scrape). It uses Python's `aiohttp` library for concurrent HTTP requests and `BeautifulSoup` for HTML parsing. The scraper collects book titles, ratings, and prices and writes the extracted data to a CSV file.
+Asynchronous book scrapper is a web scrapper for extracting book data from the website [Books to Scrape](https://books.toscrape.com/). It uses Python's `aiohttp` library for concurrent HTTP requests and `BeautifulSoup` for HTML parsing. The scraper collects book titles, ratings, and prices and writes the extracted data to a CSV file.
 
 ## features
 
