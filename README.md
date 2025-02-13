@@ -25,9 +25,9 @@ Asynchronous book scrapper is a web scrapper for extracting book data from the w
 ### installation
 
 - clone the repository or copy the script
-```
-git clone https://github.com/clouddiish/book_scrapper.git
-```
+  ```
+  git clone https://github.com/clouddiish/book_scrapper.git
+  ```
 
 ### run
 
