@@ -18,23 +18,23 @@ Asynchronous book scrapper is a web scrapper for extracting book data from the w
 - Python packages:
   - `aiohttp`
   - `beautifulsoup4`
-  ```
-  pip install aiohttp beautifulsoup4
-  ```
+```
+pip install aiohttp beautifulsoup4
+```
 
 ### installation
 
 - clone the repository or copy the script
-  ```
-  git clone https://github.com/clouddiish/book_scrapper.git
-  ```
+```
+git clone https://github.com/clouddiish/book_scrapper.git
+```
 
 ### run
 
 - run the script with the below command. Note: if needed replace the `async_books_scrapper.py` with the name of the script
-  ```
-  python async_books_scrapper.py
-  ```
+```
+python async_books_scrapper.py
+```
 
 ### output
 
